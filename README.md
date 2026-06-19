@@ -119,6 +119,48 @@ passesAll  (Bridge) — FEDELTÀ:  la spec è testata.   regime 2
 non `Conforms`. Una pila di green test non è una prova — e il tipo lo dice.
 Stessa `Spec` a monte; il tipo del testimone dice quale regime hai in mano.
 
+### Il contratto sul filo — JSON sul serio (`Insaturo/Wire.agda`)
+
+`ExternalSpec` è il ponte, ma è un oggetto Agda: dentro ci sono `Set` e
+funzioni, niente che esca davvero. Per mandarlo a un LLM serve **JSON vero**.
+L'unica cosa che mancava è come *scrivere* un campione:
+
+```agda
+record Encode (A : Set) : Set where field encode : A → String
+
+record WireLaw (C : Set) : Set₁ where     -- un obbligo DECORATO per il filo
+  field name    : String
+        dlaw    : DecLaw C
+        encS    : Encode (Sample dlaw)
+        samples : List (Sample dlaw)
+
+specJSON : (C : Set) → C → WireSpec C → String      -- il contratto, come String
+```
+
+`specJSON` rende ogni legge come una tabella di **golden vector** — coppie
+`(campione, atteso)`, dove l'atteso è `check ref` calcolato da un'impl di
+**riferimento**, non asserito (un campione che il riferimento stesso fallisce
+esce `out:false`, e il contratto lo mostra):
+
+```json
+[{"law":"eqRef","golden":[{"in":"1","out":true},{"in":"2","out":false}]}]
+```
+
+Due cose restano oneste. Il **verdetto** non è nuovo: una `WireSpec`,
+dimenticati nome ed encoder, *è* un `ExternalSpec` (`toExternal`), e si verifica
+con la stessa `passesAll` — la serializzazione aggiunge come scrivere il
+contratto, non un nuovo modo di accettarlo. E l'**onestà attraversa il filo**:
+
+```agda
+wireWitness : check (dlaw w) ref s ≡ true → check (dlaw w) cand s ≡ check (dlaw w) ref s
+            → Witness (dlaw w) cand s        -- il golden verde riprodotto PORTA il testimone…
+```
+
+…ma solo sui campioni in tabella: è `greenWitness` lifato sul golden
+serializzato — fedeltà, non emergenza. Chiude il giro Agda→Haskell: la stessa
+`Spec` produce *e* il contratto che mandi (`specJSON`), *e* il verdetto su ciò
+che torna (`passesAll`).
+
 ### L'esempio: il README diventa il file `.agda`
 
 `Insaturo/Example.agda` specifica un bound `n ≤ d` in [0,1] — lo stesso dominio
@@ -221,6 +263,7 @@ insaturo/
 ├── Insaturo/
 │   ├── Core.agda       # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 │   ├── Bridge.agda     # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
+│   ├── Wire.agda       # Encode · WireLaw · specJSON (il contratto come JSON) · wireWitness
 │   ├── Compose.agda    # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi
 │   └── Example.agda    # il DSL all'opera: saturazione e rifiuto come teoremi
 ├── insaturo.agda-lib   # depend: standard-library (radice: zero dep d'ecosistema)
@@ -270,6 +313,11 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
   perde né aggiunge obblighi di nascosto. La saturazione del prodotto emerge dai
   pezzi (`sat×ˢ`), il rifiuto si propaga (`refuse×ˢˡ/ʳ`), rafforzare restringe
   (`∧+-weaken`).
+- **serializzazione senza nuovo verdetto** — `specJSON` rende il contratto in
+  JSON, ma una `WireSpec` *è* un `ExternalSpec` (`toExternal`) e si verifica con
+  la stessa `passesAll`: il filo non introduce un modo di accettare diverso dal
+  regime 2. L'onestà attraversa il filo (`wireWitness`): un golden verde
+  riprodotto porta il `Witness`, solo sui campioni in tabella.
 
 `--safe --without-K`, zero `postulate`, zero `TERMINATING`, zero `trustMe`.
 
@@ -282,6 +330,12 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
 - **`AllHold` è puntuale, non quantificato** — `Conforms` prova le leggi su *un*
   candidato dato, non «per ogni impl». È così che dev'essere (saturazione di un
   argomento), ma non è una prova di universalità.
+- **l'encoder è fede, e il candidato è reificato** — `specJSON` produce una
+  `String` corretta *dato* un `Encode`; che quella stringa sia ciò che il runner
+  esterno davvero parsa è fedeltà fuori dal tipo. E il verdetto (`passesWire`)
+  gira su un candidato `C` reificato in Agda: che `C` rispecchi il comportamento
+  reale dell'impl Haskell resta la fede di sempre del regime 2. Wire serializza
+  il contratto, non l'impl.
 
 ---
 
@@ -289,12 +343,20 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
 
 In ordine di valore:
 
-1. **Il ponte serializzabile sul serio** — `ExternalSpec` è «concettualmente
-   serializzabile»; renderlo *davvero* JSON (leggi + golden vector) è ciò che lo
-   manda a un LLM come contratto verificabile, chiudendo il giro Agda→Haskell.
+1. **Round-trip del campione** — oggi `Encode` scrive i campioni; un `Decode`
+   con `decode ∘ encode ≡ id` chiuderebbe per *teorema* il legame fra il golden
+   serializzato e il campione su cui `check` gira — togliendo l'encoder dalla
+   lista «cosa NON è garantito».
 
 ### Già implementato
 
+- **Il ponte serializzabile** (`Insaturo/Wire.agda`) — `Encode` + `WireLaw` +
+  `specJSON`: il contratto esce come JSON vero (leggi nominate + golden vector,
+  l'atteso calcolato da un riferimento, non asserito). Il verdetto non è nuovo:
+  una `WireSpec` *è* un `ExternalSpec` (`toExternal`), verificata da `passesAll`.
+  L'onestà attraversa il filo (`wireWitness`): un golden verde riprodotto porta
+  il `Witness`, solo sui campioni in tabella. Chiude il giro Agda→Haskell —
+  stessa `Spec`, il contratto che mandi e il verdetto su ciò che torna.
 - **Composizione di spec** (`Insaturo/Compose.agda`) — `_×ˢ_` (prodotto dei
   buchi: `C, D ⇒ C × D`, ogni lato tirato indietro lungo la proiezione) e `_∧+_`
   (rafforzamento: stesso buco, leggi congiunte). Con i teoremi di
