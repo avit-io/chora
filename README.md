@@ -133,6 +133,38 @@ badRefused       : ¬ (5 ≤ 2)                       -- "QUEST'ALTRA è impossi
 Tre frasi, tre teoremi. Il README diventa il `.agda`: o typechecka o no. È il
 *markdown sotto steroidi* — non ambiguo per costruzione.
 
+### Le spec si compongono — la grammatica è di prima classe
+
+Una grammatica è di prima classe solo se i suoi oggetti **si compongono**. Due
+modi, uno per costruttore concettuale (`Insaturo/Compose.agda`):
+
+```agda
+_×ˢ_ : Spec ℓ → Spec ℓ → Spec ℓ     -- PRODOTTO dei buchi: C, D ⇒ il buco-coppia C × D
+_∧+_ : (s : Spec ℓ) → List (Law (Carrier (sig s))) → Spec ℓ   -- RAFFORZAMENTO: stesso buco, più leggi
+```
+
+`_×ˢ_` specifica due componenti insieme tenendo separati i loro obblighi (ogni
+lato tirato indietro lungo la sua proiezione); `_∧+_` stringe una spec
+aggiungendo leggi sullo **stesso** buco. Ma i costruttori non sono il punto — lo
+sono i **teoremi**: conformità al composto ⇔ conformità ai pezzi.
+
+```agda
+×ˢ-split : Conforms (s ×ˢ t) (i , j) → Conforms s i × Conforms t j   -- e ×ˢ-join, il ritorno
+∧+-split : Conforms (s ∧+ extra) impl → Conforms s impl × AllHold impl extra
+```
+
+Da lì cadono i corollari onesti, ed è qui che la composizione **paga**:
+
+```agda
+sat×ˢ     : Sat s → Sat t → Sat (s ×ˢ t)              -- la saturazione del tutto EMERGE dai pezzi
+refuse×ˢˡ : Refuses s i → Refuses (s ×ˢ t) (i , j)    -- il rifiuto di un pezzo RIFIUTA il tutto
+∧+-weaken : Conforms (s ∧+ extra) impl → Conforms s impl   -- rafforzare RESTRINGE, mai allarga
+```
+
+Saturi i componenti separatamente e il prodotto è saturato per teorema
+(`sat×ˢ`); l'onestà si propaga al composto (`refuse×ˢˡ/ʳ`); più leggi danno una
+spec più stretta, mai più larga (`∧+-weaken`).
+
 ---
 
 ## La metafora
@@ -189,6 +221,7 @@ insaturo/
 ├── Insaturo/
 │   ├── Core.agda       # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 │   ├── Bridge.agda     # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
+│   ├── Compose.agda    # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi
 │   └── Example.agda    # il DSL all'opera: saturazione e rifiuto come teoremi
 ├── insaturo.agda-lib   # depend: standard-library (radice: zero dep d'ecosistema)
 └── flake.nix           # packages.lib · lib.mkShell · devShells.default
@@ -232,6 +265,11 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
   ma solo sui campioni testati — fedeltà, non emergenza.
 - **grammatica polimorfa** — `Carrier` è un `Set` qualunque: la stessa `Spec`
   vale per funzioni, relazioni, strutture. Nessun mapping cablato a un dominio.
+- **composizione provata** — `Conforms (s ×ˢ t) (i , j) ⇔ Conforms s i × Conforms
+  t j` e `Conforms (s ∧+ extra) ⇔ Conforms s × AllHold extra`: comporre spec non
+  perde né aggiunge obblighi di nascosto. La saturazione del prodotto emerge dai
+  pezzi (`sat×ˢ`), il rifiuto si propaga (`refuse×ˢˡ/ʳ`), rafforzare restringe
+  (`∧+-weaken`).
 
 `--safe --without-K`, zero `postulate`, zero `TERMINATING`, zero `trustMe`.
 
@@ -251,12 +289,19 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
 
 In ordine di valore:
 
-1. **Composizione di spec** — `Spec → Spec → Spec`: unione delle leggi,
-   prodotto dei buchi. Una spec che si compone è ciò che rende la grammatica
-   davvero di prima classe (oggi `laws` è una lista, ma non c'è ancora l'algebra).
-2. **Il ponte serializzabile sul serio** — `ExternalSpec` è «concettualmente
+1. **Il ponte serializzabile sul serio** — `ExternalSpec` è «concettualmente
    serializzabile»; renderlo *davvero* JSON (leggi + golden vector) è ciò che lo
    manda a un LLM come contratto verificabile, chiudendo il giro Agda→Haskell.
+
+### Già implementato
+
+- **Composizione di spec** (`Insaturo/Compose.agda`) — `_×ˢ_` (prodotto dei
+  buchi: `C, D ⇒ C × D`, ogni lato tirato indietro lungo la proiezione) e `_∧+_`
+  (rafforzamento: stesso buco, leggi congiunte). Con i teoremi di
+  conformità⇔pezzi (`×ˢ-split/join`, `∧+-split/join`) e i corollari onesti:
+  `sat×ˢ` (la saturazione del prodotto emerge dai pezzi), `refuse×ˢˡ/ʳ` (il
+  rifiuto si propaga), `∧+-weaken` (rafforzare restringe). La grammatica è ora di
+  prima classe — le spec si compongono.
 
 ---
 

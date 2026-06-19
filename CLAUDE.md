@@ -112,11 +112,12 @@ satura (e allora è `Refuses`, o è regime 2 — si nomina, non si aggira).
 Insaturo/
 ├── Core.agda      # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 ├── Bridge.agda    # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
+├── Compose.agda   # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi conformità⇔pezzi
 └── Example.agda   # il DSL all'opera: saturazione (refl) e rifiuto (()) come teoremi
 ```
 
 ## Toolchain
 
 Agda 2.8 via piforge, flake nix, `nix develop` (solo stdlib in scope — insaturo
-è una radice). Typecheck:
-`agda Insaturo/Core.agda`, `agda Insaturo/Bridge.agda`, `agda Insaturo/Example.agda`.
+è una radice). Typecheck: `agda Insaturo/Core.agda`, `… Bridge.agda`,
+`… Compose.agda`, `… Example.agda`.
