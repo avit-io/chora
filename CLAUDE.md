@@ -113,6 +113,7 @@ Insaturo/
 ├── Core.agda      # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 ├── Bridge.agda    # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
 ├── Wire.agda      # Encode · WireLaw · specJSON (contratto JSON) · toExternal · wireWitness
+├── Codec.agda     # Codec (encode/decode/inverse) · runnerSound: il round-trip è un teorema
 ├── Compose.agda   # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi conformità⇔pezzi
 └── Example.agda   # il DSL all'opera: saturazione (refl) e rifiuto (()) come teoremi
 ```
@@ -121,4 +122,4 @@ Insaturo/
 
 Agda 2.8 via piforge, flake nix, `nix develop` (solo stdlib in scope — insaturo
 è una radice). Typecheck: `agda Insaturo/Core.agda`, `… Bridge.agda`,
-`… Wire.agda`, `… Compose.agda`, `… Example.agda`.
+`… Wire.agda`, `… Codec.agda`, `… Compose.agda`, `… Example.agda`.
