@@ -163,32 +163,52 @@ che torna (`passesAll`).
 
 ### Il round-trip è un teorema (`Insaturo/Codec.agda`)
 
-Restava un salto di fede: fra la stringa `"2/5"` scritta sul filo e il campione
-su cui `check` gira. Il runner esterno *parsa* la stringa — chi garantisce che
-il parse recuperi proprio quel campione? Un `Codec` lo chiude:
+Restava un salto di fede: fra ciò che è scritto sul filo e il campione su cui
+`check` gira. Il runner esterno *parsa* l'input — chi garantisce che il parse
+recuperi proprio quel campione? Un `Codec` lo chiude:
 
 ```agda
-record Codec (A : Set) : Set where
-  field enc     : Encode A
-        decode  : String → Maybe A
-        inverse : (a : A) → decode (encode enc a) ≡ just a     -- decode ∘ encode ≡ just
+record Codec (W A : Set) : Set where      -- W = filo, A = campione
+  field enc     : A → W
+        dec     : W → Maybe A
+        inverse : (a : A) → dec (enc a) ≡ just a       -- dec ∘ enc ≡ just
 ```
 
 Modellato il runner come «decodifica, poi `check`», la legge di round-trip dà
 il teorema:
 
 ```agda
-runnerVerdict d cdc cand str = map (check d cand) (decode cdc str)
+runnerVerdict d cdc cand w = map (check d cand) (dec cdc w)
 
-runnerSound : runnerVerdict d cdc cand (encode (enc cdc) s) ≡ just (check d cand s)
+runnerSound : runnerVerdict d cdc cand (enc cdc s) ≡ just (check d cand s)
 runnerSound d cdc cand s rewrite inverse cdc s = refl
 ```
 
-Il runner che riparsa l'input serializzato calcola **esattamente** `check cand
-s` — sul campione *inteso*, non su uno ricostruito a caso. L'encoder esce dalla
-lista «cosa NON è garantito»: resta solo l'obbligo di **fornire** un `Codec` la
-cui `inverse` regga (per ℕ/ℚ è un parser verificato — vedi roadmap). Un `Codec`
-è anche un `Encode` (`codecEncode`): guida `specJSON` come prima.
+Il runner che riparsa l'input calcola **esattamente** `check cand s` — sul
+campione *inteso*, non su uno ricostruito a caso.
+
+**Perché il filo `W` è un parametro, non `String`.** La `String` di Agda è un
+primitivo **opaco**: l'unico legame `String ↔ List Char` (`toList∘fromList`)
+vive in `Data.String.Unsafe`, provato per `trustMe`. Sotto `--safe` non
+esiste — quindi un round-trip che *attraversa* `String` non è dimostrabile senza
+trustMe. La conseguenza onesta: il round-trip verificato vive su un filo
+**induttivo**, e il salto finale `List Char → String` resta l'**unica** fede
+primitiva, nominata. Per questo il `Codec ℕ` verificato è su `List Char`:
+
+```agda
+natCodec : Codec (List Char) ℕ                         -- unario: n ↦ n barre
+parse-unary : (n : ℕ) → parseBars (unary n) ≡ just n   -- inverse PROVATO per induzione
+parse-unary zero    = refl
+parse-unary (suc n) = cong (map suc) (parse-unary n)
+```
+
+L'unario (non il decimale) è una scelta di **onestà sul prezzo**: il round-trip
+si dimostra per induzione strutturale, senza i lemmi di div/mod né la ricorsione
+ben fondata di `show`. Stesso teorema (`inverse`), prova alla portata; il
+decimale è lo stesso `inverse` con prova più cara. Il salto allo string-wire
+(`renderNat = fromList ∘ unary`) è isolato e nominato — non è specifico di ℕ. Un
+`Codec String` con `enc = id` resta `refl` (nessun primitivo attraversato), e
+guida `specJSON` come prima (`codecEncode`).
 
 ### L'esempio: il README diventa il file `.agda`
 
@@ -293,7 +313,7 @@ insaturo/
 │   ├── Core.agda       # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 │   ├── Bridge.agda     # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
 │   ├── Wire.agda       # Encode · WireLaw · specJSON (il contratto come JSON) · wireWitness
-│   ├── Codec.agda      # Codec (encode/decode/inverse) · runnerSound: il round-trip è un teorema
+│   ├── Codec.agda      # Codec W A (enc/dec/inverse) · runnerSound · natCodec : Codec (List Char) ℕ
 │   ├── Compose.agda    # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi
 │   └── Example.agda    # il DSL all'opera: saturazione e rifiuto come teoremi
 ├── insaturo.agda-lib   # depend: standard-library (radice: zero dep d'ecosistema)
@@ -364,12 +384,16 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
   `C` reificato in Agda: che `C` rispecchi il comportamento reale dell'impl
   Haskell resta la fede di sempre del regime 2. Wire serializza il contratto, non
   l'impl.
-- **il Codec va fornito, e la sua legge regge solo se la dimostri** — con
-  `runnerSound` il round-trip dell'input *è* un teorema (`Insaturo/Codec.agda`):
-  l'encoder non è più fede. Ma il teorema è parametrico su un `Codec` la cui
-  `inverse` (`decode ∘ encode ≡ just`) hai dimostrato. Per campioni ricchi (ℕ,
-  ℚ) ciò richiede un parser verificato — fede spostata, non ancora azzerata
-  (roadmap). Il `Codec` identità su `String` la regge con `refl`.
+- **il filo verificato è `List Char`, non `String`** — la `String` di Agda è
+  opaca: `toList∘fromList` è `trustMe` (`Data.String.Unsafe`), fuori da `--safe`.
+  Quindi il round-trip è provato sul filo induttivo (`natCodec : Codec (List
+  Char) ℕ`, `inverse` per induzione), e il salto `List Char → String`
+  (`renderNat`) resta l'unica fede primitiva — nominata, e non specifica di ℕ.
+  Non è un buco della codifica: è il confine col primitivo, reso esplicito.
+- **il Codec va fornito, e la sua legge regge solo se la dimostri** — `runnerSound`
+  è parametrico su un `Codec` la cui `inverse` hai dimostrato. `natCodec` lo fa
+  per ℕ (unario); un codec **decimale** verificato è lo stesso `inverse` con
+  prova più cara (div/mod, ricorsione ben fondata) — vedi roadmap.
 
 ---
 
@@ -377,19 +401,24 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
 
 In ordine di valore:
 
-1. **Un `Codec` verificato per ℕ/ℚ** — `runnerSound` rende il round-trip un
-   teorema *dato* un `Codec` lawful; resta da costruirne uno per i campioni
-   ricchi (parse decimale di ℕ, razionali di ℚ) con la `inverse` dimostrata,
-   così la fede dell'encoder si azzera sul serio e non solo sul `Codec` identità.
+1. **Un `Codec` *decimale* verificato (e ℚ)** — `natCodec` prova il round-trip
+   in unario; il decimale è lo stesso `inverse` con prova più cara (i lemmi
+   div/mod, la ricorsione ben fondata di `show`). Per ℚ: numeratore/denominatore
+   come coppia di ℕ. Cosmesi del filo, non nuovo teorema.
 
 ### Già implementato
 
-- **Il round-trip come teorema** (`Insaturo/Codec.agda`) — `Codec` (encode +
-  `decode : String → Maybe A` + la legge `decode ∘ encode ≡ just`) e `runnerSound`:
-  il runner che riparsa l'input serializzato calcola `check` sul campione
-  *inteso*, non su uno ricostruito. L'encoder esce dai «non garantiti», a meno
-  della `inverse` del Codec fornito. Un `Codec` è anche un `Encode`
-  (`codecEncode`): guida `specJSON` come prima.
+- **Il `Codec ℕ` verificato** (`Insaturo/Codec.agda`) — `natCodec : Codec (List
+  Char) ℕ`, codifica unaria, `inverse` (`dec ∘ enc ≡ just`) **dimostrato per
+  induzione** — non `refl` su un'identità. Su `List Char` e non `String` perché
+  quest'ultima è opaca (`toList∘fromList` è `trustMe`, fuori da `--safe`): il
+  round-trip verificato vive sul filo induttivo, il salto a `String`
+  (`renderNat`) è l'unica fede primitiva, nominata.
+- **Il round-trip come teorema** (`Insaturo/Codec.agda`) — `Codec W A` (`enc :
+  A → W` + `dec : W → Maybe A` + `inverse`) e `runnerSound`: il runner che
+  riparsa l'input calcola `check` sul campione *inteso*, non su uno ricostruito.
+  Il filo `W` è parametro (non `String`) proprio per poter dimostrare l'inverse.
+  Un `Codec String` è anche un `Encode` (`codecEncode`): guida `specJSON`.
 - **Il ponte serializzabile** (`Insaturo/Wire.agda`) — `Encode` + `WireLaw` +
   `specJSON`: il contratto esce come JSON vero (leggi nominate + golden vector,
   l'atteso calcolato da un riferimento, non asserito). Il verdetto non è nuovo:

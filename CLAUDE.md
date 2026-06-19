@@ -113,7 +113,7 @@ Insaturo/
 ├── Core.agda      # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 ├── Bridge.agda    # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
 ├── Wire.agda      # Encode · WireLaw · specJSON (contratto JSON) · toExternal · wireWitness
-├── Codec.agda     # Codec (encode/decode/inverse) · runnerSound: il round-trip è un teorema
+├── Codec.agda     # Codec W A (enc/dec/inverse) · runnerSound · natCodec : Codec (List Char) ℕ (verificato)
 ├── Compose.agda   # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi conformità⇔pezzi
 └── Example.agda   # il DSL all'opera: saturazione (refl) e rifiuto (()) come teoremi
 ```
