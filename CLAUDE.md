@@ -113,7 +113,8 @@ Insaturo/
 ├── Core.agda      # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 ├── Bridge.agda    # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
 ├── Wire.agda      # Encode · WireLaw · specJSON (contratto JSON) · toExternal · wireWitness
-├── Codec.agda     # Codec W A (enc/dec/inverse) · runnerSound · natCodec : Codec (List Char) ℕ (verificato)
+├── Codec.agda     # Codec W A (enc/dec/inverse) · runnerSound · natCodec (unario, verificato)
+├── CodecNat.agda  # natCodec10 : Codec (List Char) ℕ DECIMALE, inverse provato (div/mod, reverse)
 ├── Compose.agda   # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi conformità⇔pezzi
 └── Example.agda   # il DSL all'opera: saturazione (refl) e rifiuto (()) come teoremi
 ```

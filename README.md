@@ -196,19 +196,27 @@ trustMe. La conseguenza onesta: il round-trip verificato vive su un filo
 primitiva, nominata. Per questo il `Codec ℕ` verificato è su `List Char`:
 
 ```agda
-natCodec : Codec (List Char) ℕ                         -- unario: n ↦ n barre
-parse-unary : (n : ℕ) → parseBars (unary n) ≡ just n   -- inverse PROVATO per induzione
-parse-unary zero    = refl
-parse-unary (suc n) = cong (map suc) (parse-unary n)
+natCodec   : Codec (List Char) ℕ           -- unario (Codec.agda): n ↦ n barre, prova minima
+natCodec10 : Codec (List Char) ℕ           -- DECIMALE (CodecNat.agda): 305 ↦ "305"
 ```
 
-L'unario (non il decimale) è una scelta di **onestà sul prezzo**: il round-trip
-si dimostra per induzione strutturale, senza i lemmi di div/mod né la ricorsione
-ben fondata di `show`. Stesso teorema (`inverse`), prova alla portata; il
-decimale è lo stesso `inverse` con prova più cara. Il salto allo string-wire
-(`renderNat = fromList ∘ unary`) è isolato e nominato — non è specifico di ℕ. Un
-`Codec String` con `enc = id` resta `refl` (nessun primitivo attraversato), e
-guida `specJSON` come prima (`codecEncode`).
+Due `Codec ℕ`, stesso teorema (`inverse`), prezzo diverso. L'**unario**
+(`Codec.agda`) si dimostra per pura induzione strutturale (`parse-unary zero =
+refl`; `suc n = cong (map suc) …`) — minimo, ma il filo è illeggibile. Il
+**decimale** (`Insaturo/CodecNat.agda`) è leggibile e si prova in tre strati —
+cifra↔carattere (`Fin 10 ↔ Char`), lista↔caratteri, numero↔cifre — più i lemmi
+div/mod (`m≡m%n+[m/n]*n`, `m/n<m`) e l'involuzione di `reverse` (LSB→MSB):
+
+```agda
+encNat 305 ≡ '3' ∷ '0' ∷ '5' ∷ []                 -- refl: è davvero decimale, MSB-first
+fromDigits-toDigits : (fuel n : ℕ) → n ≤ fuel → fromDigits (toDigits fuel n) ≡ n
+```
+
+`toDigits` ricorre su un **carburante** (`fuel = n`), non su `n/10`: così è
+strutturale sotto `--safe` — niente ricorsione ben fondata, niente
+`{-# TERMINATING #-}`. Il salto allo string-wire (`fromList`) resta isolato e
+nominato — non specifico di ℕ. Un `Codec String` con `enc = id` resta `refl`
+(nessun primitivo attraversato), e guida `specJSON` come prima (`codecEncode`).
 
 ### L'esempio: il README diventa il file `.agda`
 
@@ -313,7 +321,8 @@ insaturo/
 │   ├── Core.agda       # Sig · Law · Spec · Conforms · Sat · Refuses (la grammatica)
 │   ├── Bridge.agda     # DecLaw · ExternalSpec · passesAll (regime 2: l'impl fuori da Agda)
 │   ├── Wire.agda       # Encode · WireLaw · specJSON (il contratto come JSON) · wireWitness
-│   ├── Codec.agda      # Codec W A (enc/dec/inverse) · runnerSound · natCodec : Codec (List Char) ℕ
+│   ├── Codec.agda      # Codec W A (enc/dec/inverse) · runnerSound · natCodec (unario, verificato)
+│   ├── CodecNat.agda   # natCodec10 : Codec (List Char) ℕ DECIMALE, inverse provato (div/mod, reverse)
 │   ├── Compose.agda    # _×ˢ_ (prodotto dei buchi) · _∧+_ (rafforzamento) + i teoremi
 │   └── Example.agda    # il DSL all'opera: saturazione e rifiuto come teoremi
 ├── insaturo.agda-lib   # depend: standard-library (radice: zero dep d'ecosistema)
@@ -391,9 +400,9 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
   (`renderNat`) resta l'unica fede primitiva — nominata, e non specifica di ℕ.
   Non è un buco della codifica: è il confine col primitivo, reso esplicito.
 - **il Codec va fornito, e la sua legge regge solo se la dimostri** — `runnerSound`
-  è parametrico su un `Codec` la cui `inverse` hai dimostrato. `natCodec` lo fa
-  per ℕ (unario); un codec **decimale** verificato è lo stesso `inverse` con
-  prova più cara (div/mod, ricorsione ben fondata) — vedi roadmap.
+  è parametrico su un `Codec` la cui `inverse` hai dimostrato. Per ℕ è fatto, sia
+  unario (`natCodec`) sia **decimale** (`natCodec10`, `inverse` provato); per
+  altri tipi di campione (ℚ, record) il Codec va ancora costruito.
 
 ---
 
@@ -401,19 +410,19 @@ insaturo non importa semeion né viceversa — la parentela è concettuale, non 
 
 In ordine di valore:
 
-1. **Un `Codec` *decimale* verificato (e ℚ)** — `natCodec` prova il round-trip
-   in unario; il decimale è lo stesso `inverse` con prova più cara (i lemmi
-   div/mod, la ricorsione ben fondata di `show`). Per ℚ: numeratore/denominatore
-   come coppia di ℕ. Cosmesi del filo, non nuovo teorema.
+1. **`Codec` per campioni composti (ℚ, record)** — `runnerSound` è già
+   parametrico; per ℚ basta un `Codec` su numeratore/denominatore (coppia di ℕ,
+   via `natCodec10` + un separatore), `inverse` da comporre dai due lati. Stessa
+   ricetta a tre strati, nessun teorema nuovo.
 
 ### Già implementato
 
-- **Il `Codec ℕ` verificato** (`Insaturo/Codec.agda`) — `natCodec : Codec (List
-  Char) ℕ`, codifica unaria, `inverse` (`dec ∘ enc ≡ just`) **dimostrato per
-  induzione** — non `refl` su un'identità. Su `List Char` e non `String` perché
-  quest'ultima è opaca (`toList∘fromList` è `trustMe`, fuori da `--safe`): il
-  round-trip verificato vive sul filo induttivo, il salto a `String`
-  (`renderNat`) è l'unica fede primitiva, nominata.
+- **Il `Codec ℕ` decimale verificato** (`Insaturo/CodecNat.agda`) — `natCodec10 :
+  Codec (List Char) ℕ`, leggibile (`305 ↦ "305"`), `inverse` **dimostrato** in
+  tre strati (cifra↔carattere su `Fin 10`, lista↔caratteri, numero↔cifre coi
+  lemmi div/mod) più l'involuzione di `reverse`. `toDigits` ricorre su un
+  carburante (`fuel = n`): strutturale sotto `--safe`, niente ricorsione ben
+  fondata. Un `natCodec` unario (prova minima) resta in `Codec.agda`.
 - **Il round-trip come teorema** (`Insaturo/Codec.agda`) — `Codec W A` (`enc :
   A → W` + `dec : W → Maybe A` + `inverse`) e `runnerSound`: il runner che
   riparsa l'input calcola `check` sul campione *inteso*, non su uno ricostruito.
