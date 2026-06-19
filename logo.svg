@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 260">
+
+  <!-- ╔════════════════════════════════════════════════════════════════╗
+       ║  insaturo — il concetto INSATURO alla Frege: φ( ), una firma    ║
+       ║  con un BUCO. L'anello scuro è la spec: il dominio del buco,    ║
+       ║  che resta APERTO. Il segmento d'oro è la SATURAZIONE — l'impl  ║
+       ║  che chiude il buco; ⊢ dice che la chiusura è PROVATA, non      ║
+       ║  asserita. Anello + chiusura = un intero: φ(a), l'oggetto saturo.║
+       ╚════════════════════════════════════════════════════════════════╝ -->
+
+  <!-- ── IL CAMPO: candidati grezzi attorno al buco, prima di saturare ── -->
+  <g stroke="#3A6EA5" stroke-width="2.2" stroke-linecap="round" opacity="0.4">
+    <line x1="100" y1="54"   x2="100" y2="44"/>
+    <line x1="164" y1="118"  x2="174" y2="118"/>
+    <line x1="100" y1="182"  x2="100" y2="192"/>
+    <line x1="36"  y1="118"  x2="26"  y2="118"/>
+  </g>
+
+  <!-- ── LA SPEC INSATURA: l'anello col buco a destra (la Leerstelle) ── -->
+  <circle cx="100" cy="118" r="58" fill="#1B3A5B" opacity="0.05"/>
+  <path d="M 149.2 87.3 A 58 58 0 1 0 149.2 148.7"
+        fill="none" stroke="#1B3A5B" stroke-width="3.2" stroke-linecap="round"/>
+
+  <!-- ── LA SATURAZIONE: ciò che chiude il buco — forzato, non scelto ── -->
+  <path d="M 149.2 87.3 A 58 58 0 0 1 149.2 148.7"
+        fill="none" stroke="#E0A030" stroke-width="6" stroke-linecap="round"/>
+
+  <!-- estremi del buco: la firma è il bordo, non un commento a lato -->
+  <circle cx="149.2" cy="87.3"  r="3.4" fill="#1B3A5B"/>
+  <circle cx="149.2" cy="148.7" r="3.4" fill="#1B3A5B"/>
+
+  <!-- ── IL TESTIMONE: ⊢ sulla cucitura — la chiusura è una PROVA ────── -->
+  <text x="176" y="123" text-anchor="middle"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="16" font-weight="bold" fill="#2DB9A8">⊢</text>
+
+  <!-- ── L'OGGETTO SATURO: φ(a) — il buco chiuso diventa un oggetto ──── -->
+  <circle cx="100" cy="118" r="9.5" fill="#15293F"/>
+  <circle cx="100" cy="118" r="9.5" fill="none" stroke="#E0A030" stroke-width="2"/>
+  <circle cx="100" cy="118" r="2.4" fill="#EAF6FB"/>
+
+  <!-- ── SIMBOLI: φ (il concetto) · ξ (l'argomento mancante, il buco) ── -->
+  <text x="100" y="36" text-anchor="middle"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="20" font-weight="bold" fill="#1B3A5B">φ</text>
+  <text x="132" y="116" text-anchor="middle"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="15" font-style="italic" fill="#3A6EA5">ξ</text>
+
+  <!-- ── NOME ───────────────────────────────────────────────────────── -->
+  <text x="100" y="232" text-anchor="middle"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="11" font-weight="bold" letter-spacing="4" fill="#1B3A5B">INSATURO</text>
+  <text x="100" y="248" text-anchor="middle"
+        font-family="Georgia,'Times New Roman',serif"
+        font-size="7.5" letter-spacing="1" fill="#3A6EA5">φ(ξ) · il concetto col buco</text>
+</svg>
